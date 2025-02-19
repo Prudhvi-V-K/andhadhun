@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "github.com/newtoallofthis123/patients/types";
+
+message AudioFile {
+  string filename = 1;
+  string format = 2;
+  uint32 sample_rate = 3;
+  uint32 channels = 4;
+  bytes audio_data = 5;
+}
+
+service AudioService {
+  rpc TranscribeAudio(stream AudioFile) returns (TranscribeResponse);
+  rpc HindiTranscribeAudio(stream AudioFile) returns (HindiTranscribeResponse);
+}
+
+message HindiTranscribeResponse {
+  string status = 1;
+  string message = 2;
+  string original = 3;
+}
+
+message TranscribeResponse {
+  string status = 1;
+  string message = 2;
+}
