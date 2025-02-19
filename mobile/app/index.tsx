@@ -73,6 +73,10 @@ const styles = StyleSheet.create({
   },
 });
 
+function getAudioUrl(text: string) {
+  return `${BACKEND_URL}/tts?text=${encodeURIComponent(text)}`;
+}
+
 export default function CameraScreen({ navigation }: any) {
   const [facing, setFacing] = useState<CameraType>("back");
   const cameraRef = useRef<CameraView | null>(null);
@@ -80,7 +84,9 @@ export default function CameraScreen({ navigation }: any) {
   const [photo, setPhoto] = useState<CameraCapturedPicture | null>(null);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [permission, setPermission] = useState<boolean>(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -96,6 +102,20 @@ export default function CameraScreen({ navigation }: any) {
     })();
   }, []);
 
+  async function playSound(uri: string) {
+    console.log("Loading Sound");
+    const { sound } = await Audio.Sound.createAsync({
+      uri: uri,
+    });
+    setSound(sound);
+    await sound.playAsync();
+
+    return () => {
+      console.log("Unloading Sound");
+      sound.unloadAsync();
+    };
+  }
+
   async function startAudioRecording() {
     try {
       console.log("Requesting permissions..");
@@ -109,7 +129,7 @@ export default function CameraScreen({ navigation }: any) {
       console.log("Starting recording..");
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        Audio.RecordingOptionsPresets.LOW_QUALITY,
       );
       await recording.startAsync();
       setRecording(recording);
@@ -122,21 +142,33 @@ export default function CameraScreen({ navigation }: any) {
   async function submit() {
     const formData = new FormData();
 
+    const audioForm = new FormData();
+
+    audioForm.append(`audio`, {
+      uri: audioUri,
+      name: `record.m4a`,
+      type: "audio/m4a",
+    } as any);
+
+    await playSound(audioUri ?? "");
+
+    const res =
+      (await fetch(BACKEND_URL + "/transcribe", {
+        body: audioForm,
+        method: "POST",
+      }).catch(console.error)) ?? null;
+    const audioData = await res?.json();
+    const prompt = audioData["message"];
+    console.log("Upload response:", audioData["message"]);
+
     formData.append(`image`, {
       uri: photo?.uri,
       name: `photo.jpg`,
       type: "image/jpeg",
     } as any);
 
-    formData.append(`prompt`, "describe the image");
+    formData.append(`prompt`, prompt);
 
-    // formData.append(`file`, {
-    //   uri: audioUri,
-    //   name: `record.m4a`,
-    //   type: "audio/m4a",
-    // } as any);
-
-    // check if backend url is working
     const response =
       (await fetch(BACKEND_URL + "/img", {
         body: formData,
@@ -144,6 +176,11 @@ export default function CameraScreen({ navigation }: any) {
       }).catch(console.error)) ?? null;
     const data = await response?.json();
     console.log("Upload response:", data);
+
+    const parsed = JSON.parse(data["message"]);
+
+    console.log(parsed);
+    await playSound(getAudioUrl(parsed["general_description"]));
   }
 
   async function stopAudioRecording() {
@@ -166,10 +203,8 @@ export default function CameraScreen({ navigation }: any) {
         const tphoto =
           (await cameraRef.current.takePictureAsync(options)) ?? null;
 
-        // if (photo) {
         console.log("Captured photo", tphoto?.uri);
         setPhoto(tphoto ?? null);
-        // }
       } catch (error) {
         console.error("Error taking photo:", error);
       }
@@ -200,8 +235,9 @@ export default function CameraScreen({ navigation }: any) {
             <TouchableOpacity
               style={styles.button}
               onPress={async () => {
-                await capture();
-                // await startAudioRecording();
+                capture().then(async () => {
+                  await startAudioRecording();
+                });
               }}
             >
               <AntDesign name="playcircleo" size={32} color="white" />

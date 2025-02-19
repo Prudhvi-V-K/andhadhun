@@ -1,15 +1,19 @@
+from io import BytesIO
 import logging
 
-from fastapi.responses import FileResponse
+from gtts import gTTS
 import grpc
+from pydub import AudioSegment
 import pyttsx3
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 import numpy as np
 from google import genai
 from google.genai import types
 from transcribe_pb2 import AudioFile
 from transcribe_pb2_grpc import AudioServiceStub
+import sounddevice as sd
+from scipy.io.wavfile import write
 
 # DANGER: DONOT FUCKING COMMIT THIS!!
 client = genai.Client(api_key="AIzaSyBAwAwPzjetIm_q9vvEh_rXpfQbMnLxzVk")
@@ -34,11 +38,15 @@ logger = logging.getLogger(__name__)
 
 contexts = {}
 
-
 @app.post("/transcribe")
-async def transcribe(file: UploadFile = File(...)):
+async def transcribe(audio: UploadFile = File(...)):
     try:
-        content = await file.read()
+        content = await audio.read()
+        audioSeg = AudioSegment.from_file(BytesIO(content), format="3gp")
+        buffer = BytesIO()
+        audioSeg.export(buffer, format="wav")
+        buffer.seek(0)
+        content = buffer.read()
         with grpc.insecure_channel("localhost:50052", []) as channel:
             stub = AudioServiceStub(channel)
             reqs = []
@@ -47,7 +55,7 @@ async def transcribe(file: UploadFile = File(...)):
             for i in range(0, len(content), chunk_size):
                 chunk = content[i : i + chunk_size]
                 request = AudioFile(
-                    filename=file.filename, format="m4a", audio_data=chunk
+                    filename=audio.filename, format="wav", audio_data=chunk
                 )
                 reqs.append(request)
 
@@ -91,16 +99,20 @@ async def img(
         return {"message": str(e)}
 
 
-@app.post("/tts")
+@app.get("/tts")
 def tts(
-    text: str = Form(...),
+    text: str = "",
 ):
     random_number = np.random.randint(10000, 99999)
-    tmp_path = f"{random_number}.wav"
-    engine.save_to_file(text, tmp_path)
-    engine.runAndWait()
+    tmp_path = f"audio/{random_number}.mp3"
+    t = gTTS(text=text, lang='en', slow=False)
+    t.save(tmp_path)
 
-    return FileResponse(tmp_path, media_type="audio/wav", filename="output.wav")
+    audio = AudioSegment.from_file(tmp_path, format="mp3")
+    buffer = BytesIO()
+    audio.export(buffer, format="mp3")
+    buffer.seek(0)
+    return Response(content=buffer.read(), media_type="audio/mpeg")
 
 
 if __name__ == "__main__":
