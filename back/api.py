@@ -1,49 +1,59 @@
-from typing import Optional, Dict
-from fastapi import FastAPI, File, Form, UploadFile, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
+import logging
+import grpc
 import uvicorn
-import json
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket
+
+from transcribe_pb2 import AudioFile
+from transcribe_pb2_grpc import AudioServiceStub
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+logger = logging.getLogger(__name__)
 
-@app.get("/")
-def ping():
-    return {"ping": "pong"}
+@app.post("/transcribe/")
+async def transcribe(
+    file: UploadFile = File(...)
+):
+    try:
+        content = await file.read()
 
+        with grpc.insecure_channel("localhost:50052", []) as channel:
+            stub = AudioServiceStub(channel)
+            reqs = []
 
-@app.post("/img/")
-async def upload_image(file: UploadFile = File(...), prompt: Optional[str] = Form(...)):
-    contents = await file.read()
+            chunk_size = 1024
+            for i in range(0, len(content), chunk_size):
+                chunk = content[i:i+chunk_size]
+                request = AudioFile(
+                    filename=file.filename,
+                    format="wav",
+                    audio_data=chunk
+                )
+                reqs.append(request)
 
-    return {
-        "filename": file.filename,
-        "content_type": file.content_type,
-        "file_size": len(contents),
-        "message": "Image uploaded successfully",
-    }
+            response = stub.TranscribeAudio(iter(reqs))
 
+            return {"message": response.message}
 
-@app.websocket_route("/ws")
+    except grpc.RpcError as e:
+        logger.error(f"RPC failed: {e.code()}: {e.details()}")
+        raise HTTPException(status_code=500, detail="Failed to transcribe audio")
+    except Exception as e:
+        logger.error(f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=400, detail="Error processing file")
+
+@app.websocket_route("/talk")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
             data = await websocket.receive_text()
-            try:
-                message: Dict = json.loads(data)
-                response_data = {"message": f"Received: {message}"}
-                await websocket.send_text(json.dumps(response_data))
-            except json.JSONDecodeError:
-                await websocket.send_text("Invalid JSON format")
+            await websocket.send_text(f"Message text was: {data}")
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:

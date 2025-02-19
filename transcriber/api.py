@@ -51,7 +51,7 @@ class AudioServiceServicer(transcribe_pb2_grpc.AudioServiceServicer):
 
         print("Starting to transcribe")
         try:
-            audio = AudioSegment.from_file(io.BytesIO(audio_data), format="webm")
+            audio = AudioSegment.from_file(io.BytesIO(audio_data), format=req.format)
             audio = audio.set_frame_rate(16000).set_channels(1).set_sample_width(2)
             wave_data = audio.export(format="wav").read()
             chunk_size = self.cal_chunk_size(wave_data)

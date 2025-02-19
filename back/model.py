@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import time
 
 class ObjectDetector:
     def __init__(self, weights_path, config_path, labels_path):
@@ -9,8 +8,8 @@ class ObjectDetector:
         self.layer_names = self.get_output_layers()
         self.confidence_threshold = 0.5
         self.nms_threshold = 0.4
-        self.known_width = 0.2  # Known object width in meters
-        self.focal_length = 500  # Example focal length
+        self.known_width = 0.2
+        self.focal_length = 500
 
     def get_output_layers(self):
         layer_names = self.net.getLayerNames()
@@ -20,7 +19,7 @@ class ObjectDetector:
         blob = cv2.dnn.blobFromImage(frame, 1/255.0, (416, 416), swapRB=True, crop=False)
         self.net.setInput(blob)
         return self.net.forward(self.layer_names)
-    
+
     def process_detections(self, frame, detections):
         height, width = frame.shape[:2]
         boxes, confidences, class_ids = [], [], []
@@ -71,7 +70,7 @@ class ObjectDetector:
 
         indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_threshold, self.nms_threshold)
         return [[boxes[i], class_ids[i], confidences[i]] for i in indices]
-    
+
     def estimate_distance(self, object_width_pixels):
         return (self.known_width * self.focal_length) / object_width_pixels
 
@@ -84,8 +83,8 @@ class ObjectDetector:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    def process_video(self, video_source="rtsp://10.108.18.91"):
-        cap = cv2.VideoCapture(video_source)
+    def process_video(self, img: PIL.Image):
+        cap = cv2.VideoCapture()
 
         if not cap.isOpened():
             print("Error: Could not open video stream")
