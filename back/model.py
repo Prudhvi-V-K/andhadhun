@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from PIL import Image
 
 class ObjectDetector:
     def __init__(self, weights_path, config_path, labels_path):
@@ -60,13 +61,9 @@ class ObjectDetector:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    def process_image(self, image_path):
-        frame = cv2.imread(image_path)
-
-        if frame is None:
-            print(f"Error: Could not read image {image_path}")
-            return
-
+    def process_pil_image(self, img: Image.Image):
+        frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)  # Convert PIL to OpenCV format
+        
         detections = self.detect_objects(frame)
         processed_detections = self.process_detections(frame, detections)
         self.draw_detections(frame, processed_detections)
@@ -77,4 +74,7 @@ class ObjectDetector:
 
 if __name__ == "__main__":
     detector = ObjectDetector("yolov4-tiny.weights", "yolov4-tiny.cfg", "classes.txt")
-    detector.process_image("src/person.jpg")  # Change this to your image file
+    
+    # Load an image using PIL
+    pil_image = Image.open("src/person.jpg")  # Change this to your image path
+    detector.process_pil_image(pil_image)
