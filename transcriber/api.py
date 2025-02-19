@@ -69,13 +69,11 @@ class AudioServiceServicer(transcribe_pb2_grpc.AudioServiceServicer):
                 text += str(self.transcriber.transcribe_audio(wave_data))
 
             print(text)
-            # text = asyncio.run(translate_text(text))
-            # print(text)
             return transcribe_pb2.TranscribeResponse(status="Success", message=text)
         except Exception as e:
             self.logger.error(f"Error during transcription: {e}")
-            # context.set_code(grpc.StatusCode.INTERNAL)
-            # context.set_details(f"Error: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(f"Error: {e}")
             return transcribe_pb2.TranscribeResponse(status="Error", message=str(e))
 
     def HindiTranscribeAudio(self, request_iterator, context):

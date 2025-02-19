@@ -42,11 +42,11 @@ class ObjectDetector:
                     class_ids.append(class_id)
 
         indices = cv2.dnn.NMSBoxes(boxes, confidences, self.confidence_threshold, self.nms_threshold)
-        
+
         if indices is None or len(indices) == 0:
             return []
         indices = indices.flatten() if len(indices) > 0 else []
-        
+
         return [[boxes[i], class_ids[i], confidences[i]] for i in indices]
 
     def estimate_distance(self, object_width_pixels):
@@ -62,19 +62,19 @@ class ObjectDetector:
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     def process_pil_image(self, img: Image.Image):
-        frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)  # Convert PIL to OpenCV format
-        
+        frame = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
         detections = self.detect_objects(frame)
         processed_detections = self.process_detections(frame, detections)
         self.draw_detections(frame, processed_detections)
 
         cv2.imshow("Object Detection", frame)
-        cv2.waitKey(0)  # Wait until a key is pressed
+        cv2.waitKey(0)
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     detector = ObjectDetector("yolov4-tiny.weights", "yolov4-tiny.cfg", "classes.txt")
-    
+
     # Load an image using PIL
     pil_image = Image.open("src/person.jpg")  # Change this to your image path
     detector.process_pil_image(pil_image)
