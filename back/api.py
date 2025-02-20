@@ -39,9 +39,10 @@ logger = logging.getLogger(__name__)
 contexts = {}
 
 @app.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...)):
+async def transcribe(file: UploadFile = File(...)):
     try:
         content = await audio.read()
+        content = await file.read()
         audioSeg = AudioSegment.from_file(BytesIO(content), format="3gp")
         buffer = BytesIO()
         audioSeg.export(buffer, format="wav")
@@ -55,7 +56,7 @@ async def transcribe(audio: UploadFile = File(...)):
             for i in range(0, len(content), chunk_size):
                 chunk = content[i : i + chunk_size]
                 request = AudioFile(
-                    filename=audio.filename, format="wav", audio_data=chunk
+                    filename=file.filename, format="wav", audio_data=chunk
                 )
                 reqs.append(request)
 

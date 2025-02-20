@@ -141,20 +141,20 @@ export default function CameraScreen({ navigation }: any) {
   async function submit() {
     const audioForm = new FormData();
 
-    audioForm.append(`audio`, {
+    audioForm.append(`file`, {
       uri: audioUri,
-      name: `record.m4a`,
-      type: "audio/m4a",
+      name: `record.3gp`,
+      type: "audio/3gp",
     } as any);
 
-    // const res =
-    //   (await fetch(BACKEND_URL + "/transcribe", {
-    //     body: audioForm,
-    //     method: "POST",
-    //   }).catch(console.error)) ?? null;
-    // const audioData = await res?.json();
-    // const prompt = audioData["message"];
-    // console.log("Upload response:", audioData["message"]);
+    const res =
+      (await fetch(BACKEND_URL + "/transcribe/", {
+        body: audioForm,
+        method: "POST",
+      })) ?? null;
+    const audioData = await res?.json();
+    const prompt = audioData["message"];
+    console.log("Upload response:", audioData["message"]);
 
     const formData = new FormData();
     formData.append(`image`, {
