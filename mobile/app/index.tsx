@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   button: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1e90ff",
+    backgroundColor: "#1a1a1a",
     borderRadius: 40,
     padding: 16,
     elevation: 4,
@@ -150,7 +150,7 @@ export default function CameraScreen({ navigation }: any) {
       type: "audio/m4a",
     } as any);
 
-    await playSound(audioUri ?? "");
+    // await playSound(audioUri ?? "");
 
     const res =
       (await fetch(BACKEND_URL + "/transcribe", {
@@ -193,6 +193,8 @@ export default function CameraScreen({ navigation }: any) {
     console.log("Recording stopped and stored at", uri);
     setAudioUri(uri);
     setIsRecording(false);
+
+    submit().catch(console.error);
   }
 
   async function capture() {
@@ -240,12 +242,9 @@ export default function CameraScreen({ navigation }: any) {
                 });
               }}
             >
-              <AntDesign name="playcircleo" size={32} color="white" />
+              <AntDesign name="videocamera" size={32} color="white" />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={styles.button} onPress={submit}>
-            <Text>Submit</Text>
-          </TouchableOpacity>
         </View>
       </CameraView>
     </View>
