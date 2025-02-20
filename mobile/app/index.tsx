@@ -86,7 +86,6 @@ export default function CameraScreen({ navigation }: any) {
   const [permission, setPermission] = useState<boolean>(false);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -140,8 +139,6 @@ export default function CameraScreen({ navigation }: any) {
   }
 
   async function submit() {
-    const formData = new FormData();
-
     const audioForm = new FormData();
 
     audioForm.append(`audio`, {
@@ -150,24 +147,23 @@ export default function CameraScreen({ navigation }: any) {
       type: "audio/m4a",
     } as any);
 
-    // await playSound(audioUri ?? "");
+    // const res =
+    //   (await fetch(BACKEND_URL + "/transcribe", {
+    //     body: audioForm,
+    //     method: "POST",
+    //   }).catch(console.error)) ?? null;
+    // const audioData = await res?.json();
+    // const prompt = audioData["message"];
+    // console.log("Upload response:", audioData["message"]);
 
-    const res =
-      (await fetch(BACKEND_URL + "/transcribe", {
-        body: audioForm,
-        method: "POST",
-      }).catch(console.error)) ?? null;
-    const audioData = await res?.json();
-    const prompt = audioData["message"];
-    console.log("Upload response:", audioData["message"]);
-
+    const formData = new FormData();
     formData.append(`image`, {
       uri: photo?.uri,
       name: `photo.jpg`,
       type: "image/jpeg",
     } as any);
 
-    formData.append(`prompt`, prompt);
+    formData.append(`prompt`, "Describe the image");
 
     const response =
       (await fetch(BACKEND_URL + "/img", {
